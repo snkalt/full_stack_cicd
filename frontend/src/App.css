@@ -1,0 +1,70 @@
+.App {
+  font-family: Arial, sans-serif;
+  text-align: center;
+  margin-top: 40px;
+}
+
+.user-form {
+  display: inline-block;
+  text-align: left;
+  background: #f9f9f9;
+  padding: 20px 30px;
+  border-radius: 8px;
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+  margin-bottom: 20px;
+}
+
+.user-form label {
+  display: block;
+  margin-bottom: 10px;
+  font-weight: bold;
+}
+
+.user-form input[type="text"],
+.user-form input[type="date"] {
+  padding: 8px;
+  margin-top: 5px;
+  width: 100%;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+}
+
+.radio-group {
+  margin-top: 5px;
+}
+
+.radio-group label {
+  margin-right: 10px;
+}
+
+button {
+  margin-top: 15px;
+  padding: 8px 16px;
+  background: #4caf50;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+button.delete {
+  background: #f44336;
+  margin-left: 10px;
+}
+
+.user-table {
+  margin: 0 auto;
+  border-collapse: collapse;
+  width: 80%;
+}
+
+.user-table th,
+.user-table td {
+  border: 1px solid #ccc;
+  padding: 10px;
+  text-align: center;
+}
+
+.user-table th {
+  background-color: #f2f2f2;
+}
