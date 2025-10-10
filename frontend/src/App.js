@@ -7,11 +7,13 @@ function App() {
   const [users, setUsers] = useState([]);
   const [editingId, setEditingId] = useState(null);
 
+  // Handle form input changes
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
+  // Submit or update user
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
@@ -28,6 +30,7 @@ function App() {
     }
   };
 
+  // Fetch all users
   const fetchUsers = async () => {
     try {
       const res = await axios.get('http://localhost:5001/api/users');
@@ -37,6 +40,7 @@ function App() {
     }
   };
 
+  // Populate form for editing
   const handleEdit = (user) => {
     setFormData({
       name: user.name,
@@ -46,6 +50,7 @@ function App() {
     setEditingId(user.id);
   };
 
+  // Delete a user
   const handleDelete = async (id) => {
     if (!window.confirm("Are you sure you want to delete this user?")) return;
     try {
@@ -54,6 +59,26 @@ function App() {
     } catch (err) {
       alert('Error deleting user');
     }
+  };
+
+  // Export users to CSV
+  const exportToCSV = () => {
+    if (users.length === 0) return alert('No users to export.');
+
+    const header = ['Name', 'Gender', 'Birthdate'];
+    const rows = users.map(u => [u.name, u.gender, u.birthdate.slice(0, 10)]);
+    const csvContent = [header, ...rows]
+      .map(e => e.join(','))
+      .join('\n');
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', 'users.csv');
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   };
 
   return (
@@ -81,6 +106,7 @@ function App() {
 
         <button type="submit">{editingId ? 'Update' : 'Submit'}</button>
         <button type="button" onClick={fetchUsers} style={{ marginLeft: '10px' }}>Show</button>
+        <button type="button" onClick={exportToCSV} style={{ marginLeft: '10px' }}>Export CSV</button>
       </form>
 
       {users.length > 0 && (
