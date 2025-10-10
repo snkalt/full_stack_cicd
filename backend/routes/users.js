@@ -1,6 +1,18 @@
 const express = require('express');
 const router = express.Router();
 const db = require('../db');
+const { Parser } = require('json2csv');
+const { S3Client, PutObjectCommand } = require('@aws-sdk/client-s3');
+const crypto = require('crypto');
+
+// AWS S3 Client
+const s3 = new S3Client({
+  region: process.env.AWS_REGION,
+  credentials: {
+    accessKeyId: process.env.AWS_ACCESS_KEY_ID,
+    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
+  },
+});
 
 // Create new user
 router.post('/', async (req, res) => {
@@ -53,6 +65,43 @@ router.delete('/:id', async (req, res) => {
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Delete failed' });
+  }
+});
+
+// ✅ Export all users to CSV and upload to S3
+router.get('/export-csv', async (req, res) => {
+  try {
+    // 1️⃣ Fetch data
+    const result = await db.query('SELECT * FROM users ORDER BY id ASC');
+    const users = result.rows;
+
+    if (users.length === 0) {
+      return res.status(404).json({ error: 'No users found to export' });
+    }
+
+    // 2️⃣ Convert to CSV
+    const parser = new Parser();
+    const csv = parser.parse(users);
+
+    // 3️⃣ Prepare S3 upload
+    const filename = `users_export_${Date.now()}_${crypto.randomBytes(4).toString('hex')}.csv`;
+
+    const uploadParams = {
+      Bucket: process.env.S3_BUCKET_NAME,
+      Key: filename,
+      Body: csv,
+      ContentType: 'text/csv',
+    };
+
+    await s3.send(new PutObjectCommand(uploadParams));
+
+    // 4️⃣ Construct S3 URL (assuming bucket is public or has appropriate policy)
+    const fileUrl = `https://${process.env.S3_BUCKET_NAME}.s3.${process.env.AWS_REGION}.amazonaws.com/${filename}`;
+
+    res.json({ message: 'CSV exported and uploaded successfully!', fileUrl });
+  } catch (err) {
+    console.error('CSV export failed:', err);
+    res.status(500).json({ error: 'CSV export failed' });
   }
 });
 

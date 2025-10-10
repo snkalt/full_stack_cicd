@@ -1,0 +1,33 @@
+services:
+  backend:
+    build: ./backend
+    container_name: simple-form-backend
+    ports:
+      - "5001:5000"
+    env_file:
+      - ./backend/.env
+    depends_on:
+      - db
+
+  frontend:
+    build: ./frontend
+    container_name: simple-form-frontend
+    ports:
+      - "3001:80"
+    depends_on:
+      - backend
+
+  db:
+    image: postgres:15
+    container_name: simple-form-db
+    environment:
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: ${DB_DATABASE}
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+volumes:
+  pgdata:
