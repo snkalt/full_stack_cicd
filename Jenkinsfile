@@ -2,13 +2,14 @@ pipeline {
     agent any
 
     environment {
-        AWS_REGION = "ap-south-1"
-        AWS_ACCOUNT_ID = "392361759693"
+        AWS_REGION      = "ap-south-1"                     // Your AWS region
+        AWS_ACCOUNT_ID  = "392361759693"                  // Replace with your 12-digit AWS account ID
 
-        BACKEND_REPO = "simple-notepad-backend"
-        FRONTEND_REPO = "simple-notepad-frontend"
+        BACKEND_REPO    = "simple-notepad-backend"       // ECR repo name for backend
+        FRONTEND_REPO   = "simple-notepad-frontend"      // ECR repo name for frontend
 
-        PATH = "/usr/local/bin:$PATH"  // ensures Jenkins can find docker and aws CLI
+        // Ensure Jenkins finds local Docker and AWS CLI on macOS
+        PATH = "/usr/local/bin:${env.PATH}"
     }
 
     stages {
@@ -21,12 +22,13 @@ pipeline {
 
         stage('Set AWS Credentials') {
             steps {
-                // Inject AWS access and secret keys stored in Jenkins credentials
-                withCredentials([[$class: 'UsernamePasswordMultiBinding',
-                                  credentialsId: 'aws-jenkins-creds',
-                                  usernameVariable: 'AWS_ACCESS_KEY_ID',
-                                  passwordVariable: 'AWS_SECRET_ACCESS_KEY']]) {
-                    sh 'echo "AWS credentials injected for this build"'
+                withCredentials([usernamePassword(
+                    credentialsId: '8183f4cd-b85c-4a55-93d1-9db663dbe34a',
+                    usernameVariable: 'AWS_ACCESS_KEY_ID',
+                    passwordVariable: 'AWS_SECRET_ACCESS_KEY'
+                )]) {
+                    // Set AWS credentials in environment for downstream stages
+                    sh 'echo "AWS credentials loaded for Jenkins pipeline"'
                 }
             }
         }
