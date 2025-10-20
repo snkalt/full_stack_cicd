@@ -2,49 +2,41 @@ pipeline {
     agent any
 
     environment {
-        AWS_REGION      = "ap-south-1"                     // Your AWS region
-        AWS_ACCOUNT_ID  = "392361759693"                  // Replace with your 12-digit AWS account ID
-
-        BACKEND_REPO    = "simple-notepad-backend"       // ECR repo name for backend
-        FRONTEND_REPO   = "simple-notepad-frontend"      // ECR repo name for frontend
-
-        // Ensure Jenkins finds local Docker and AWS CLI on macOS
-        PATH = "/usr/local/bin:${env.PATH}"
+        AWS_REGION = "ap-south-1"                  // Your AWS region
+        AWS_ACCOUNT_ID = "392361759693"            // Replace with your 12-digit AWS account ID
+        BACKEND_REPO = "simple-notepad-backend"    // ECR repo name for backend
+        FRONTEND_REPO = "simple-notepad-frontend"  // ECR repo name for frontend
     }
 
     stages {
 
         stage('Checkout') {
             steps {
+                // Checkout the PDF branch from your GitHub repo
                 git branch: 'pdf', url: 'https://github.com/snkalt/full_stack_cicd.git'
-            }
-        }
-
-        stage('Set AWS Credentials') {
-            steps {
-                withCredentials([usernamePassword(
-                    credentialsId: '8183f4cd-b85c-4a55-93d1-9db663dbe34a',
-                    usernameVariable: 'AWS_ACCESS_KEY_ID',
-                    passwordVariable: 'AWS_SECRET_ACCESS_KEY'
-                )]) {
-                    // Set AWS credentials in environment for downstream stages
-                    sh 'echo "AWS credentials loaded for Jenkins pipeline"'
-                }
             }
         }
 
         stage('Login to ECR') {
             steps {
-                sh '''
-                    aws ecr get-login-password --region $AWS_REGION | \
-                    docker login --username AWS --password-stdin $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com
-                '''
+                withCredentials([usernamePassword(
+                    credentialsId: 'aws-jenkins-creds',   // Your Jenkins AWS credentials ID
+                    usernameVariable: 'AWS_ACCESS_KEY_ID',
+                    passwordVariable: 'AWS_SECRET_ACCESS_KEY'
+                )]) {
+                    sh '''
+                        echo "Logging in to ECR..."
+                        aws ecr get-login-password --region $AWS_REGION | \
+                        docker login --username AWS --password-stdin $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com
+                    '''
+                }
             }
         }
 
         stage('Build Backend Image') {
             steps {
                 sh '''
+                    echo "Building backend Docker image..."
                     docker build -t $BACKEND_REPO:latest ./backend
                     docker tag $BACKEND_REPO:latest $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/$BACKEND_REPO:latest
                 '''
@@ -54,6 +46,7 @@ pipeline {
         stage('Build Frontend Image') {
             steps {
                 sh '''
+                    echo "Building frontend Docker image..."
                     docker build -t $FRONTEND_REPO:latest ./frontend
                     docker tag $FRONTEND_REPO:latest $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/$FRONTEND_REPO:latest
                 '''
@@ -63,7 +56,10 @@ pipeline {
         stage('Push Images to ECR') {
             steps {
                 sh '''
+                    echo "Pushing backend image to ECR..."
                     docker push $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/$BACKEND_REPO:latest
+
+                    echo "Pushing frontend image to ECR..."
                     docker push $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/$FRONTEND_REPO:latest
                 '''
             }
@@ -72,6 +68,7 @@ pipeline {
         stage('Deploy') {
             steps {
                 sh '''
+                    echo "Deploying application with docker-compose..."
                     docker-compose down --remove-orphans
                     docker-compose up -d --build
                 '''
@@ -81,6 +78,7 @@ pipeline {
 
     post {
         always {
+            // Clean up dangling Docker images to save space
             sh 'docker system prune -f'
         }
     }
