@@ -2,28 +2,39 @@ pipeline {
     agent any
 
     environment {
-        AWS_REGION = "ap-south-1"                    // Your AWS region
-        AWS_PROFILE = "jenkins"                       // AWS CLI profile for Jenkins IAM user
-        AWS_ACCOUNT_ID = "392361759693"              // Replace with your 12-digit AWS account ID
+        AWS_REGION = "ap-south-1"
+        AWS_ACCOUNT_ID = "392361759693"
 
-        BACKEND_REPO = "simple-notepad-backend"      // ECR repo name for backend
-        FRONTEND_REPO = "simple-notepad-frontend"    // ECR repo name for frontend
+        BACKEND_REPO = "simple-notepad-backend"
+        FRONTEND_REPO = "simple-notepad-frontend"
+
+        PATH = "/usr/local/bin:$PATH"  // ensures Jenkins can find docker and aws CLI
     }
 
     stages {
 
         stage('Checkout') {
             steps {
-                // Checkout the PDF branch from your GitHub repo
                 git branch: 'pdf', url: 'https://github.com/snkalt/full_stack_cicd.git'
+            }
+        }
+
+        stage('Set AWS Credentials') {
+            steps {
+                // Inject AWS access and secret keys stored in Jenkins credentials
+                withCredentials([[$class: 'UsernamePasswordMultiBinding',
+                                  credentialsId: 'aws-jenkins-creds',
+                                  usernameVariable: 'AWS_ACCESS_KEY_ID',
+                                  passwordVariable: 'AWS_SECRET_ACCESS_KEY']]) {
+                    sh 'echo "AWS credentials injected for this build"'
+                }
             }
         }
 
         stage('Login to ECR') {
             steps {
-                // Login to AWS ECR using the Jenkins AWS profile
                 sh '''
-                    aws --profile $AWS_PROFILE ecr get-login-password --region $AWS_REGION | \
+                    aws ecr get-login-password --region $AWS_REGION | \
                     docker login --username AWS --password-stdin $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com
                 '''
             }
@@ -58,7 +69,6 @@ pipeline {
 
         stage('Deploy') {
             steps {
-                // Deploy using docker-compose (ensure docker-compose.yml is at repo root)
                 sh '''
                     docker-compose down --remove-orphans
                     docker-compose up -d --build
@@ -69,7 +79,6 @@ pipeline {
 
     post {
         always {
-            // Clean up dangling Docker images to save space
             sh 'docker system prune -f'
         }
     }
