@@ -17,21 +17,14 @@ pipeline {
             }
         }
 
-        stage('Login to ECR') {
-            steps {
-                withCredentials([usernamePassword(
-                    credentialsId: 'aws-jenkins-creds',   // Your Jenkins AWS credentials ID
-                    usernameVariable: 'AWS_ACCESS_KEY_ID',
-                    passwordVariable: 'AWS_SECRET_ACCESS_KEY'
-                )]) {
-                    sh '''
-                        echo "Logging in to ECR..."
-                        aws ecr get-login-password --region $AWS_REGION | \
-                        docker login --username AWS --password-stdin $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com
-                    '''
-                }
-            }
+        stage('Set AWS Credentials') {
+    steps {
+        withAWS(credentials: '8183f4cd-b85c-4a55-93d1-9db663dbe34a', region: "$AWS_REGION") {
+            sh 'echo "AWS credentials loaded for Jenkins pipeline"'
         }
+    }
+}
+
 
         stage('Build Backend Image') {
             steps {
